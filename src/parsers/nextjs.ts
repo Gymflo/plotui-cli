@@ -183,10 +183,13 @@ function extractFromAST(sourceFile: any, route: string, filePath: string): Extra
   }
 
   // ── NavLinks ───────────────────────────────────────────────────────────────
-  const linkMatches = text.matchAll(/href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/[aA]>/g);
+  // Match <a href="..."> AND Next.js <Link href="..."> (both close with </a> or </Link>)
+  const linkMatches = text.matchAll(/href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/(?:[aA]|[Ll]ink)>/g);
   for (const m of linkMatches) {
-    const label = m[2].replace(/<[^>]+>/g, '').trim();
-    if (label && label.length < 80) result.navLinks.push({ label, href: m[1] });
+    const href = m[1];
+    if (!href.startsWith('/')) continue; // skip external / mailto / # links
+    const label = m[2].replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+    if (label && label.length < 80) result.navLinks.push({ label, href });
   }
 
   // ── Headings ──────────────────────────────────────────────────────────────
