@@ -8,6 +8,8 @@ Scan your codebase and generate a knowledge graph for PlotUI.
 npm install -g plotui-cli
 ```
 
+> **Note:** Run all commands from your project's root directory — the folder that contains your `package.json`. If your app lives in a subdirectory (e.g. `apps/web/`), `cd` into it first.
+
 ## Usage
 
 ```bash

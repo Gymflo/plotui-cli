@@ -53,7 +53,7 @@ export async function runScan(options: {
   console.log(`App: ${appName}`);
 
   console.log('\nParsing codebase...');
-  const { parsedFiles, rawFileContents } = parseCodebase(resolvedDir, framework);
+  const { parsedFiles, rawFileContents, extractedPages } = parseCodebase(resolvedDir, framework);
   console.log(`Found ${rawFileContents.length} pages/components`);
 
   console.log('\nReading supplementary documentation...');
@@ -82,7 +82,7 @@ export async function runScan(options: {
       console.log('Get your key: https://www.plotui.com/dashboard/settings');
     } else {
       console.log(`\nSending to PlotUI (${resolvedApiUrl})...`);
-      await uploadParsedFiles({ parsedFiles, rawFileContents, docs, framework, appName }, resolvedApiKey, resolvedApiUrl);
+      await uploadParsedFiles({ parsedFiles, rawFileContents, extractedPages, docs, framework, appName }, resolvedApiKey, resolvedApiUrl);
     }
   }
 

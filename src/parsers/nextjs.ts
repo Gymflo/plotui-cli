@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'node:crypto';
 import { Project } from 'ts-morph';
 import type { ParsedFile } from '../types/index.js';
 import { safeReadFile, isBlockedFile } from '../lib/redact.js';
@@ -8,6 +9,7 @@ export interface RawFileContent {
   route: string;
   filePath: string;
   content: string;
+  contentHash: string;
 }
 
 export interface ExtractedPage {
@@ -107,7 +109,8 @@ export function parseNextJSApp(rootDir: string): { parsedFiles: ParsedFile[]; ra
 
     // Also keep raw content for Gemini description generation
     if (!isComponent) {
-      rawFileContents.push({ route, filePath, content });
+      const contentHash = crypto.createHash('sha256').update(content).digest('hex');
+      rawFileContents.push({ route, filePath, content, contentHash });
       parsedFiles.push({
         path: filePath,
         route,

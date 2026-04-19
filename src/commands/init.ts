@@ -114,7 +114,7 @@ export async function runInit(options: { dir?: string; apiKey?: string; yes?: bo
 
     if (shouldScan) {
       console.log('\n  Parsing codebase…');
-      const { parsedFiles, rawFileContents } = parseCodebase(rootDir, framework);
+      const { parsedFiles, rawFileContents, extractedPages } = parseCodebase(rootDir, framework);
       console.log(`  ${dim('Pages found:')} ${rawFileContents.length}`);
 
       const docs = readSupplementaryDocs(rootDir);
@@ -123,7 +123,7 @@ export async function runInit(options: { dir?: string; apiKey?: string; yes?: bo
       console.log('\n  Sending to PlotUI for AI processing…');
       console.log(dim('  (No source code is stored — only the parsed structure)'));
       const scanUrl = `${API_BASE}/api/scan`;
-      await uploadParsedFiles({ parsedFiles, rawFileContents, docs, framework, appName }, apiKey, scanUrl);
+      await uploadParsedFiles({ parsedFiles, rawFileContents, extractedPages, docs, framework, appName }, apiKey, scanUrl);
     } else {
       console.log(dim('\n  Skipping scan. Run it later with:'));
       console.log(`  ${cyan('npx plotui-cli scan --api-key <key>')}`);

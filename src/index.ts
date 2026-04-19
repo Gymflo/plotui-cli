@@ -72,7 +72,7 @@ program
 
       // Parse codebase (get count for consent prompt)
       console.log('\nParsing codebase...');
-      const { parsedFiles, rawFileContents } = parseCodebase(resolvedDir, framework);
+      const { parsedFiles, rawFileContents, extractedPages } = parseCodebase(resolvedDir, framework);
       console.log(`Found ${rawFileContents.length} pages/components`);
 
       // Read supplementary docs
@@ -106,7 +106,7 @@ program
           console.log('Get your key from: https://www.plotui.com/dashboard/settings');
         } else {
           console.log(`Sending to PlotUI for AI processing (${resolvedApiUrl})...`);
-          await uploadParsedFiles({ parsedFiles, rawFileContents, docs, framework, appName }, resolvedApiKey, resolvedApiUrl);
+          await uploadParsedFiles({ parsedFiles, rawFileContents, extractedPages, docs, framework, appName }, resolvedApiKey, resolvedApiUrl);
         }
       } else {
         console.log('Skipping upload (--no-upload flag set)');
