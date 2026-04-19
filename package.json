@@ -1,9 +1,10 @@
 {
   "name": "plotui-cli",
-  "version": "0.3.0",
-  "description": "PlotUI CLI — add AI support to your SaaS in minutes",
+  "version": "0.3.1",
+  "description": "PlotUI CLI - add AI support to your SaaS in minutes",
   "type": "module",
   "bin": {
+    "plotui-cli": "./dist/plotui.js",
     "plotui": "./dist/plotui.js",
     "plotui-scan": "./dist/index.js"
   },
