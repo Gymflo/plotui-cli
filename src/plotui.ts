@@ -1,15 +1,24 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import { config as loadDotenv } from 'dotenv';
+import { loadEnvUpwards } from './detect.js';
 import { runScan } from './commands/scan.js';
 import { runInit } from './commands/init.js';
+
+// Walk UP the directory tree from CWD loading every .env / .env.local found.
+// Handles monorepos where the founder runs from the repo root but .env.local
+// lives in apps/web/, OR runs from apps/web/ but .env lives at the root.
+loadEnvUpwards(process.cwd(), (envPath, opts) =>
+  loadDotenv({ path: envPath, override: opts.override, quiet: true }),
+);
 
 const program = new Command();
 
 program
   .name('plotui')
   .description('PlotUI CLI — add AI support to your SaaS in minutes')
-  .version('0.3.0');
+  .version('0.5.0');
 
 // ── plotui init ───────────────────────────────────────────────────────────────
 program
@@ -31,7 +40,7 @@ program
 program
   .command('scan')
   .description('Scan your codebase and (re)generate the knowledge graph')
-  .option('-d, --dir <directory>', 'Project directory', process.cwd())
+  .option('-d, --dir <directory>', 'Project directory (auto-detected if omitted)')
   .option('-o, --output <file>', 'Save parsed JSON to file')
   .option('--no-upload', 'Skip upload to PlotUI')
   .option('--api-key <key>', 'PlotUI API key')

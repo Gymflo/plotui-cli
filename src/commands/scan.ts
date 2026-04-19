@@ -1,7 +1,7 @@
 import * as readline from 'readline';
 import * as fs from 'fs';
 import * as path from 'path';
-import { detectFramework, getAppName } from '../detect.js';
+import { detectFramework, getAppName, findSupportedAppDir } from '../detect.js';
 import { parseCodebase } from '../parsers/index.js';
 import { readSupplementaryDocs } from '../lib/readDocs.js';
 import { uploadParsedFiles } from '../lib/upload.js';
@@ -40,12 +40,23 @@ export async function runScan(options: {
   apiUrl?: string;
   yes?: boolean;
 }) {
-  const resolvedDir = path.resolve(options.dir ?? process.cwd());
+  let resolvedDir = path.resolve(options.dir ?? process.cwd());
   const resolvedApiKey = options.apiKey ?? process.env.PLOTUI_API_KEY;
   const resolvedApiUrl = options.apiUrl ?? process.env.PLOTUI_API_URL ?? 'https://www.plotui.com/api/scan';
 
   console.log('\nPlotUI Scanner\n');
   console.log('Detecting framework...');
+
+  // If CWD isn't itself a supported app, try to auto-discover one in subdirs (monorepo-friendly).
+  // Only kicks in when the user didn't explicitly pass --dir.
+  if (!options.dir) {
+    const found = findSupportedAppDir(resolvedDir);
+    if (found && found.dir !== resolvedDir) {
+      console.log(`Found app in subdirectory: ${path.relative(resolvedDir, found.dir)}`);
+      resolvedDir = found.dir;
+    }
+  }
+
   const framework = detectFramework(resolvedDir);
   console.log(`Framework: ${framework}`);
 
