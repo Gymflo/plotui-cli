@@ -1,0 +1,13 @@
+# Exclude TypeScript source — only ship compiled dist/
+src/
+tsconfig.json
+
+# Dev/test files
+*.test.ts
+*.spec.ts
+.env
+.env.*
+
+# Editor
+.vscode/
+.idea/
