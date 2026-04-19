@@ -12,7 +12,7 @@ interface UploadPayload {
 export async function uploadParsedFiles(
   payload: UploadPayload,
   apiKey: string,
-  apiUrl: string = 'https://plotui.com/api/scan'
+  apiUrl: string = 'https://www.plotui.com/api/scan'
 ): Promise<void> {
   const response = await fetch(apiUrl, {
     method: 'POST',
@@ -32,5 +32,5 @@ export async function uploadParsedFiles(
   console.log('✓ Knowledge graph generated and saved!');
   console.log(`  Graph ID: ${result.graphId}`);
   console.log(`  Pages:    ${result.nodeCount} nodes mapped`);
-  console.log(`  View at:  https://plotui.com/dashboard/graph`);
+  console.log(`  View at:  https://www.plotui.com/dashboard/graph`);
 }

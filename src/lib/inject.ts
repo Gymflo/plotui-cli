@@ -104,7 +104,7 @@ export function injectWidget(
   rootDir: string,
   framework: Framework,
   orgId: string,
-  apiBase = 'https://plotui-web-production.up.railway.app'
+  apiBase = 'https://www.plotui.com'
 ): InjectResult {
   const tag = SCRIPT_TAG(orgId, apiBase);
 

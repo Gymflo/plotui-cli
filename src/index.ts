@@ -45,7 +45,7 @@ program
   .option('-o, --output <file>', 'Output file for knowledge graph JSON')
   .option('--no-upload', 'Skip uploading to PlotUI')
   .option('--api-key <key>', 'PlotUI API key')
-  .option('--api-url <url>', 'PlotUI API URL', 'https://plotui.com/api/scan')
+  .option('--api-url <url>', 'PlotUI API URL', 'https://www.plotui.com/api/scan')
   .option('--yes', 'Skip consent prompt (useful for CI/CD)')
   .action(async (options) => {
     try {
@@ -56,9 +56,9 @@ program
         options.apiKey || process.env.PLOTUI_API_KEY;
 
       const resolvedApiUrl: string =
-        options.apiUrl !== 'https://plotui.com/api/scan'
+        options.apiUrl !== 'https://www.plotui.com/api/scan'
           ? options.apiUrl
-          : (process.env.PLOTUI_API_URL ?? 'https://plotui.com/api/scan');
+          : (process.env.PLOTUI_API_URL ?? 'https://www.plotui.com/api/scan');
 
       console.log('\nPlotUI Scanner v0.2.0\n');
 
@@ -103,7 +103,7 @@ program
         if (!resolvedApiKey) {
           console.log('No API key provided. Skipping upload.');
           console.log('Add PLOTUI_API_KEY=your_key to your .env.local or use --api-key flag.');
-          console.log('Get your key from: https://plotui.com/dashboard/settings');
+          console.log('Get your key from: https://www.plotui.com/dashboard/settings');
         } else {
           console.log(`Sending to PlotUI for AI processing (${resolvedApiUrl})...`);
           await uploadParsedFiles({ parsedFiles, rawFileContents, docs, framework, appName }, resolvedApiKey, resolvedApiUrl);

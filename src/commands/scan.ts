@@ -42,7 +42,7 @@ export async function runScan(options: {
 }) {
   const resolvedDir = path.resolve(options.dir ?? process.cwd());
   const resolvedApiKey = options.apiKey ?? process.env.PLOTUI_API_KEY;
-  const resolvedApiUrl = options.apiUrl ?? process.env.PLOTUI_API_URL ?? 'https://plotui-web-production.up.railway.app/api/scan';
+  const resolvedApiUrl = options.apiUrl ?? process.env.PLOTUI_API_URL ?? 'https://www.plotui.com/api/scan';
 
   console.log('\nPlotUI Scanner\n');
   console.log('Detecting framework...');
@@ -79,7 +79,7 @@ export async function runScan(options: {
     if (!resolvedApiKey) {
       console.log('\nNo API key provided. Skipping upload.');
       console.log('Add PLOTUI_API_KEY to .env.local or use --api-key flag.');
-      console.log('Get your key: https://plotui.com/dashboard/settings');
+      console.log('Get your key: https://www.plotui.com/dashboard/settings');
     } else {
       console.log(`\nSending to PlotUI (${resolvedApiUrl})...`);
       await uploadParsedFiles({ parsedFiles, rawFileContents, docs, framework, appName }, resolvedApiKey, resolvedApiUrl);

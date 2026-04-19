@@ -8,7 +8,7 @@ import { readSupplementaryDocs } from '../lib/readDocs.js';
 import { uploadParsedFiles } from '../lib/upload.js';
 import { injectWidget } from '../lib/inject.js';
 
-const API_BASE = process.env.PLOTUI_API_URL?.replace('/api/scan', '') ?? 'https://plotui-web-production.up.railway.app';
+const API_BASE = process.env.PLOTUI_API_URL?.replace('/api/scan', '') ?? 'https://www.plotui.com';
 
 function ask(rl: readline.Interface, question: string): Promise<string> {
   return new Promise((resolve) => rl.question(question, resolve));
@@ -48,14 +48,14 @@ export async function runInit(options: { dir?: string; apiKey?: string; yes?: bo
     let apiKey = options.apiKey ?? process.env.PLOTUI_API_KEY ?? '';
 
     if (!apiKey) {
-      console.log(dim('  Get your API key at: https://plotui.com/dashboard/settings\n'));
+      console.log(dim('  Get your API key at: https://www.plotui.com/dashboard/settings\n'));
       apiKey = (await ask(rl, cyan('  › Paste your PlotUI API key: '))).trim();
     } else {
       console.log(green('  ✓') + ` API key loaded from ${options.apiKey ? '--api-key flag' : 'PLOTUI_API_KEY env var'}`);
     }
 
     if (!apiKey) {
-      console.error('\n  API key is required. Get one at https://plotui.com/dashboard/settings');
+      console.error('\n  API key is required. Get one at https://www.plotui.com/dashboard/settings');
       process.exit(1);
     }
 
