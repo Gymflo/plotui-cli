@@ -38,6 +38,7 @@ export async function runScan(options: {
   upload?: boolean;
   apiKey?: string;
   apiUrl?: string;
+  reset?: boolean;
   yes?: boolean;
 }) {
   let resolvedDir = path.resolve(options.dir ?? process.cwd());
@@ -92,6 +93,21 @@ export async function runScan(options: {
       console.log('Add PLOTUI_API_KEY to .env.local or use --api-key flag.');
       console.log('Get your key: https://www.plotui.com/dashboard/settings');
     } else {
+      if (options.reset) {
+        const resetUrl = resolvedApiUrl.replace(/\/api\/scan$/, '/api/graph');
+        console.log(`\nResetting existing graph at ${resetUrl}...`);
+        const res = await fetch(resetUrl, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirm: 'reset graph', apiKey: resolvedApiKey }),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Reset failed: ${text}`);
+        }
+        const data = await res.json() as { deleted?: number; message?: string };
+        console.log(`  ✓ ${data.message ?? `Reset ${data.deleted ?? 0} graph(s).`}`);
+      }
       console.log(`\nSending to PlotUI (${resolvedApiUrl})...`);
       await uploadParsedFiles({ parsedFiles, rawFileContents, extractedPages, docs, framework, appName }, resolvedApiKey, resolvedApiUrl);
     }

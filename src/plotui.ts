@@ -18,7 +18,7 @@ const program = new Command();
 program
   .name('plotui')
   .description('PlotUI CLI — add AI support to your SaaS in minutes')
-  .version('0.5.0');
+  .version('0.6.0');
 
 // ── plotui init ───────────────────────────────────────────────────────────────
 program
@@ -45,6 +45,7 @@ program
   .option('--no-upload', 'Skip upload to PlotUI')
   .option('--api-key <key>', 'PlotUI API key')
   .option('--api-url <url>', 'PlotUI API URL override')
+  .option('--reset', 'Wipe the existing graph before scanning (clean slate)')
   .option('--yes', 'Skip consent prompt (CI/CD)')
   .action(async (options) => {
     try {
