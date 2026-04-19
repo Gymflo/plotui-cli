@@ -15,13 +15,17 @@ export function detectFramework(rootDir: string): Framework {
   const hasNext = !!deps['next'];
   const hasVite = !!deps['vite'];
   const hasCRA = !!deps['react-scripts'];
-  const hasAppDir = fs.existsSync(path.join(rootDir, 'app')) || fs.existsSync(path.join(rootDir, 'src', 'app'));
-  const hasPagesDir = fs.existsSync(path.join(rootDir, 'pages')) || fs.existsSync(path.join(rootDir, 'src', 'pages'));
 
-  if (hasNext && hasAppDir) return 'nextjs-app';
+  // Look for app/pages dirs in root AND one level of common subdirs (src/, web/, frontend/)
+  const dirsToCheck = [rootDir, path.join(rootDir, 'src')];
+  const hasAppDir  = dirsToCheck.some(d => fs.existsSync(path.join(d, 'app')));
+  const hasPagesDir = dirsToCheck.some(d => fs.existsSync(path.join(d, 'pages')));
+
+  if (hasNext && hasAppDir)  return 'nextjs-app';
   if (hasNext && hasPagesDir) return 'nextjs-pages';
+  if (hasNext) return 'nextjs-app'; // fallback: Next.js detected but no clear app/pages dir yet
   if (hasVite) return 'react-vite';
-  if (hasCRA) return 'cra';
+  if (hasCRA)  return 'cra';
   
   throw new Error(
     'Framework not supported. Supported frameworks: Next.js (App Router), Next.js (Pages Router), React + Vite, Create React App'
