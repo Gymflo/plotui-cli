@@ -251,6 +251,46 @@ export function extractSignals(content: string, route: string, filePath: string)
     return result; // unparseable file — return empty
   }
 
+  // ── Pass 1: extract nav arrays like const adminNav = [{href:"/x",title:"X"}]
+  // This catches the common React pattern where navigation is defined as a
+  // static array of objects and rendered via <Link href={item.href}>.
+  const navArrayHrefs = new Map<string, { href: string; label: string }[]>();
+
+  walk(ast, (node) => {
+    if (node.type !== 'VariableDeclarator') return;
+    const init = node.init as AnyNode | null;
+    if (!init || init.type !== 'ArrayExpression') return;
+    const elements = (init.elements as AnyNode[]) ?? [];
+    const pairs: { href: string; label: string }[] = [];
+    for (const el of elements) {
+      if (!el || el.type !== 'ObjectExpression') continue;
+      const props = (el.properties as AnyNode[]) ?? [];
+      let href: string | null = null;
+      let label: string | null = null;
+      for (const prop of props) {
+        if (prop.type !== 'ObjectProperty') continue;
+        const key = prop.key as AnyNode;
+        const keyName = key.type === 'Identifier' ? key.name as string : null;
+        const val = prop.value as AnyNode;
+        const valStr = stringValue(val);
+        if (keyName === 'href' && valStr?.startsWith('/')) href = valStr;
+        if ((keyName === 'title' || keyName === 'label' || keyName === 'name') && valStr) label = valStr;
+      }
+      if (href) pairs.push({ href, label: label ?? href });
+    }
+    if (pairs.length > 0) {
+      const id = ((node.id as AnyNode)?.name as string) ?? 'unknown';
+      navArrayHrefs.set(id, pairs);
+    }
+  });
+
+  // Flatten all nav-array hrefs into navLinks
+  for (const pairs of navArrayHrefs.values()) {
+    for (const { href, label } of pairs) {
+      result.navLinks.push({ href, label });
+    }
+  }
+
   walk(ast, (node) => {
     // ── JSXElement: covers everything that has children ────────────────────
     if (node.type === 'JSXElement') {
@@ -376,6 +416,12 @@ export function extractSignals(content: string, route: string, filePath: string)
   // Deduplicate
   result.roles = [...new Set(result.roles)];
   result.apiCalls = [...new Set(result.apiCalls)];
+  const seenHrefs = new Set<string>();
+  result.navLinks = result.navLinks.filter(n => {
+    if (seenHrefs.has(n.href)) return false;
+    seenHrefs.add(n.href);
+    return true;
+  });
 
   return result;
 }
