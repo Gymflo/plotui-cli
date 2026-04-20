@@ -413,6 +413,20 @@ export function extractSignals(content: string, route: string, filePath: string)
     }
   });
 
+  // Fallback: if the AST walk produced no navLinks (e.g. Babel's JSX parser
+  // choked on a regex literal containing <> in a .tsx file), scan the raw
+  // source text for href="..." / href='...' literals as a safety net.
+  if (result.navLinks.length === 0) {
+    const hrefRe = /href=["'](\/?[^"'#?]+)["']/g;
+    let m: RegExpExecArray | null;
+    while ((m = hrefRe.exec(content)) !== null) {
+      const href = m[1];
+      if (href.startsWith('/')) {
+        result.navLinks.push({ href, label: href });
+      }
+    }
+  }
+
   // Deduplicate
   result.roles = [...new Set(result.roles)];
   result.apiCalls = [...new Set(result.apiCalls)];

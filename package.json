@@ -1,6 +1,6 @@
 {
   "name": "plotui-cli",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "PlotUI CLI - add AI support to your SaaS in minutes",
   "type": "module",
   "engines": {
