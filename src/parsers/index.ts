@@ -1,6 +1,6 @@
 import type { Framework, ParsedFile } from '../types/index.js';
 import { parseNextJSApp, type RawFileContent, type ExtractedPage } from './nextjs.js';
-import { parseReactVite } from './reactVite.js';
+import { parseReactFamily } from './reactVite.js';
 
 export interface ParseResult {
   parsedFiles: ParsedFile[];
@@ -14,10 +14,10 @@ export function parseCodebase(rootDir: string, framework: Framework): ParseResul
     case 'nextjs-pages':
       return parseNextJSApp(rootDir);
     case 'react-vite':
-    case 'cra': {
-      const parsedFiles = parseReactVite(rootDir);
-      return { parsedFiles, rawFileContents: [], extractedPages: [] };
-    }
+    case 'cra':
+    case 'gatsby':
+    case 'remix':
+      return parseReactFamily(rootDir, framework);
     default:
       throw new Error(`Unsupported framework: ${framework}`);
   }

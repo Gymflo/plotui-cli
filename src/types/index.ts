@@ -1,4 +1,4 @@
-export type Framework = 'nextjs-app' | 'nextjs-pages' | 'react-vite' | 'cra';
+export type Framework = 'nextjs-app' | 'nextjs-pages' | 'react-vite' | 'cra' | 'gatsby' | 'remix';
 
 export interface Node {
   key: string;

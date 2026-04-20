@@ -1,6 +1,6 @@
 {
   "name": "plotui-cli",
-  "version": "0.6.1",
+  "version": "0.7.1",
   "description": "PlotUI CLI - add AI support to your SaaS in minutes",
   "type": "module",
   "engines": {
@@ -17,14 +17,15 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "start": "node dist/plotui.js"
+    "start": "node dist/plotui.js",
+    "test": "tsc && node dist/parsers/__tests__/babelExtract.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
+    "@babel/parser": "^7.29.2",
     "@google/generative-ai": "^0.21.0",
     "commander": "^12.1.0",
-    "dotenv": "^17.4.1",
-    "ts-morph": "^27.0.2"
+    "dotenv": "^17.4.1"
   },
   "devDependencies": {
     "@types/dotenv": "^6.1.1",

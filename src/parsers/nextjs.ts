@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'node:crypto';
-import { Project } from 'ts-morph';
 import type { ParsedFile } from '../types/index.js';
 import { safeReadFile, isBlockedFile } from '../lib/redact.js';
+import { extractSignals } from './babelExtract.js';
 
 export interface RawFileContent {
   route: string;
@@ -29,85 +29,52 @@ export interface ExtractedPage {
 }
 
 export function parseNextJSApp(rootDir: string): { parsedFiles: ParsedFile[]; rawFileContents: RawFileContent[]; extractedPages: ExtractedPage[] } {
-  let appDir = path.join(rootDir, 'app');
-  if (!fs.existsSync(appDir)) appDir = path.join(rootDir, 'src', 'app');
-
   const parsedFiles: ParsedFile[] = [];
   const rawFileContents: RawFileContent[] = [];
   const extractedPages: ExtractedPage[] = [];
 
-  if (!fs.existsSync(appDir)) return { parsedFiles, rawFileContents, extractedPages };
-
-  // Collect all TSX/TS page files first
+  // ── Locate the pages/routes directory ─────────────────────────────────────
+  // Support: App Router (app/), Pages Router (pages/), src/ variants
   const pageFiles: { filePath: string; route: string }[] = [];
 
-  function scanDirectory(dir: string, baseRoute: string = '') {
-    const files = fs.readdirSync(dir);
-    for (const file of files) {
-      const fullPath = path.join(dir, file);
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
-        const isRouteGroup = file.startsWith('(') && file.endsWith(')');
-        const isPrivate = file.startsWith('_');
-        if (!isPrivate && file !== 'node_modules') {
-          scanDirectory(fullPath, isRouteGroup ? baseRoute : `${baseRoute}/${file}`);
-        }
-      } else if (file === 'page.tsx' || file === 'page.ts') {
-        pageFiles.push({ filePath: fullPath, route: baseRoute || '/' });
-      } else if (file === 'layout.tsx' || file === 'layout.ts') {
-        pageFiles.push({ filePath: fullPath, route: `${baseRoute || '/'} (layout)` });
-      }
-    }
-  }
+  const appDir =
+    [path.join(rootDir, 'app'), path.join(rootDir, 'src', 'app')]
+      .find(d => fs.existsSync(d));
 
-  scanDirectory(appDir);
+  const pagesDir =
+    [path.join(rootDir, 'pages'), path.join(rootDir, 'src', 'pages')]
+      .find(d => fs.existsSync(d));
 
-  // Also collect shared component files
+  if (appDir) scanAppDir(appDir, '', pageFiles);
+  if (pagesDir) scanPagesDir(pagesDir, '', pageFiles);
+
+  if (pageFiles.length === 0) return { parsedFiles, rawFileContents, extractedPages };
+
+  // ── Collect shared component files ────────────────────────────────────────
   const componentDirs = [path.join(rootDir, 'src', 'components'), path.join(rootDir, 'components')];
-  let componentDir = '';
-  for (const d of componentDirs) {
-    if (fs.existsSync(d)) { componentDir = d; break; }
-  }
-
   const componentFiles: string[] = [];
-  if (componentDir) {
-    collectComponents(componentDir, componentFiles);
+  for (const d of componentDirs) {
+    if (fs.existsSync(d)) { collectComponents(d, componentFiles); break; }
   }
 
-  // Run ts-morph AST extraction on all files
-  const project = new Project({
-    compilerOptions: {
-      jsx: 4, // JsxEmit.ReactJSX
-      allowJs: true,
-      resolveJsonModule: true,
-    },
-    skipAddingFilesFromTsConfig: true,
-  });
-
-  // Add all page files + component files to project
+  // ── Extract signals from every file using Babel ───────────────────────────
   const allFiles = [
     ...pageFiles.map(f => ({ ...f, isComponent: false })),
-    ...componentFiles.map(f => ({ filePath: f, route: `[component] ${path.basename(f, path.extname(f))}`, isComponent: true })),
+    ...componentFiles.map(f => ({
+      filePath: f,
+      route: `[component] ${path.basename(f, path.extname(f))}`,
+      isComponent: true,
+    })),
   ];
 
-  for (const { filePath } of allFiles) {
-    if (!isBlockedFile(filePath) && fs.existsSync(filePath)) {
-      project.addSourceFileAtPath(filePath);
-    }
-  }
-
   for (const { filePath, route, isComponent } of allFiles) {
+    if (isBlockedFile(filePath)) continue;
     const content = safeReadFile(filePath);
     if (!content) continue;
 
-    const sourceFile = project.getSourceFile(filePath);
-    if (!sourceFile) continue;
-
-    // AST extraction
-    const extracted = extractFromAST(sourceFile, route, filePath);
+    const extracted = extractSignals(content, route, filePath);
     extractedPages.push(extracted);
 
-    // Also keep raw content for Gemini description generation
     if (!isComponent) {
       const contentHash = crypto.createHash('sha256').update(content).digest('hex');
       rawFileContents.push({ route, filePath, content, contentHash });
@@ -131,113 +98,42 @@ export function parseNextJSApp(rootDir: string): { parsedFiles: ParsedFile[]; ra
   return { parsedFiles, rawFileContents, extractedPages };
 }
 
-function extractFromAST(sourceFile: any, route: string, filePath: string): ExtractedPage {
-  const result: ExtractedPage = {
-    route, filePath,
-    tabs: [], buttons: [], inputs: [], dialogs: [], navLinks: [],
-    toastMessages: [], validationMessages: [], roles: [],
-    statusConditions: [], apiCalls: [], headings: [],
-  };
-
-  const text = sourceFile.getFullText();
-
-  // ── Tabs ──────────────────────────────────────────────────────────────────
-  const tabMatches = text.matchAll(/<TabsTrigger[^>]*value=["']([^"']*)["'][^>]*>([\s\S]*?)<\/TabsTrigger>/g);
-  for (const m of tabMatches) {
-    const label = m[2].replace(/<[^>]+>/g, '').trim();
-    if (label && label.length < 100) result.tabs.push(label);
-  }
-
-  // ── Buttons ───────────────────────────────────────────────────────────────
-  const btnMatches = text.matchAll(/<Button[^>]*>([\s\S]*?)<\/Button>/g);
-  for (const m of btnMatches) {
-    const label = m[1].replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
-    if (label && label.length > 1 && label.length < 80) result.buttons.push(label);
-  }
-
-  // ── Inputs ────────────────────────────────────────────────────────────────
-  const inputMatches = text.matchAll(/<Input[^>]*>/g);
-  for (const m of inputMatches) {
-    const placeholderMatch = m[0].match(/placeholder=["']([^"']*)["']/);
-    const typeMatch = m[0].match(/type=["']([^"']*)["']/);
-    if (typeMatch?.[1] === 'password' || typeMatch?.[1] === 'hidden') continue; // skip sensitive
-    result.inputs.push({
-      label: placeholderMatch?.[1] || '',
-      placeholder: placeholderMatch?.[1] || '',
-      required: m[0].includes('required'),
-    });
-  }
-
-  // ── Dialogs ───────────────────────────────────────────────────────────────
-  const dialogMatches = text.matchAll(/<DialogTitle[^>]*>([\s\S]*?)<\/DialogTitle>/g);
-  for (const m of dialogMatches) {
-    const label = m[1].replace(/<[^>]+>/g, '').trim();
-    if (label && label.length < 120) result.dialogs.push(label);
-  }
-
-  // ── Sheet/Drawer titles ───────────────────────────────────────────────────
-  const sheetMatches = text.matchAll(/<SheetTitle[^>]*>([\s\S]*?)<\/SheetTitle>/g);
-  for (const m of sheetMatches) {
-    const label = m[1].replace(/<[^>]+>/g, '').trim();
-    if (label && label.length < 120) result.dialogs.push(label);
-  }
-
-  // ── NavLinks ───────────────────────────────────────────────────────────────
-  // Match <a href="..."> AND Next.js <Link href="..."> (both close with </a> or </Link>)
-  const linkMatches = text.matchAll(/href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/(?:[aA]|[Ll]ink)>/g);
-  for (const m of linkMatches) {
-    const href = m[1];
-    if (!href.startsWith('/')) continue; // skip external / mailto / # links
-    const label = m[2].replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
-    if (label && label.length < 80) result.navLinks.push({ label, href });
-  }
-
-  // ── Headings ──────────────────────────────────────────────────────────────
-  for (const tag of ['h1', 'h2', 'h3']) {
-    const headingMatches = text.matchAll(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'g'));
-    for (const m of headingMatches) {
-      const label = m[1].replace(/<[^>]+>/g, '').trim();
-      if (label && label.length < 120) result.headings.push(label);
+// ── App Router directory scanner ───────────────────────────────────────────────
+// Strips route groups (dashboard), collects page.tsx and layout.tsx
+function scanAppDir(dir: string, baseRoute: string, out: { filePath: string; route: string }[]) {
+  const files = fs.readdirSync(dir);
+  for (const file of files) {
+    const fullPath = path.join(dir, file);
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      if (file === 'node_modules' || file.startsWith('_')) continue;
+      const isRouteGroup = file.startsWith('(') && file.endsWith(')');
+      scanAppDir(fullPath, isRouteGroup ? baseRoute : `${baseRoute}/${file}`, out);
+    } else if (file === 'page.tsx' || file === 'page.ts') {
+      out.push({ filePath: fullPath, route: baseRoute || '/' });
+    } else if (file === 'layout.tsx' || file === 'layout.ts') {
+      out.push({ filePath: fullPath, route: `${baseRoute || '/'} (layout)` });
     }
   }
+}
 
-  // ── Toast messages ────────────────────────────────────────────────────────
-  const toastMatches = text.matchAll(/toast\.(error|success|info|warning)\(["'`]([^"'`\n]+)["'`]/g);
-  for (const m of toastMatches) {
-    result.toastMessages.push({ type: m[1], message: m[2] });
+// ── Pages Router directory scanner ────────────────────────────────────────────
+// Skips _app, _document, api/ — derives routes from file paths
+function scanPagesDir(dir: string, baseRoute: string, out: { filePath: string; route: string }[]) {
+  const files = fs.readdirSync(dir);
+  for (const file of files) {
+    const fullPath = path.join(dir, file);
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      if (file === 'node_modules' || file === 'api') continue;
+      scanPagesDir(fullPath, `${baseRoute}/${file}`, out);
+    } else if (file.match(/\.(tsx|ts|jsx|js)$/)) {
+      if (file.startsWith('_')) continue; // skip _app, _document, _error
+      const base = file.replace(/\.(tsx|ts|jsx|js)$/, '');
+      const route = base === 'index' ? (baseRoute || '/') : `${baseRoute}/${base}`;
+      out.push({ filePath: fullPath, route });
+    }
   }
-
-  // ── Validation messages ───────────────────────────────────────────────────
-  const valMatches = text.matchAll(/setError[^(]*\(["'`]([^"'`\n]+)["'`]\)/g);
-  for (const m of valMatches) result.validationMessages.push(m[1]);
-
-  // ── Status conditions ─────────────────────────────────────────────────────
-  const statusMatches = text.matchAll(/status\s*===?\s*["']([^"']+)["']/g);
-  for (const m of statusMatches) result.statusConditions.push(m[1]);
-
-  // ── Role detection ────────────────────────────────────────────────────────
-  const rolePatterns = [
-    /role\s*===?\s*["']([^"']+)["']/g,
-    /user\.role\s*===?\s*["']([^"']+)["']/g,
-    /session\.user\.role\s*===?\s*["']([^"']+)["']/g,
-    /hasRole\(["']([^"']+)["']\)/g,
-  ];
-  for (const p of rolePatterns) {
-    const matches = text.matchAll(p);
-    for (const m of matches) if (m[1]) result.roles.push(m[1]);
-  }
-  result.roles = [...new Set(result.roles)];
-
-  // ── API calls ─────────────────────────────────────────────────────────────
-  const fetchMatches = text.matchAll(/fetch\(["'`](\/api[^"'`]+)["'`]/g);
-  for (const m of fetchMatches) result.apiCalls.push(m[1]);
-
-  const helperMatches = text.matchAll(/(?:fetchJson|getJson|postJson|putJson|deleteJson)\(["'`](\/[^"'`]+)["'`]/g);
-  for (const m of helperMatches) result.apiCalls.push(m[1]);
-
-  result.apiCalls = [...new Set(result.apiCalls)];
-
-  return result;
 }
 
 function collectComponents(dir: string, files: string[], depth = 0) {

@@ -21,6 +21,8 @@ function frameworkOf(dir: string): Framework | null {
   if (deps.next && hasAppDir) return 'nextjs-app';
   if (deps.next && hasPagesDir) return 'nextjs-pages';
   if (deps.next) return 'nextjs-app';
+  if (deps.gatsby) return 'gatsby';
+  if (deps['@remix-run/react'] || deps['@remix-run/node'] || deps['@remix-run/serve']) return 'remix';
   if (deps.vite) return 'react-vite';
   if (deps['react-scripts']) return 'cra';
   return null;
