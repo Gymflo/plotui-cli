@@ -238,7 +238,11 @@ export function extractSignals(content: string, route: string, filePath: string)
     tabs: [], buttons: [], inputs: [], dialogs: [], navLinks: [],
     toastMessages: [], validationMessages: [], roles: [],
     statusConditions: [], apiCalls: [], headings: [],
+    marketingText: '',
   };
+
+  const isMarketingRoute = route === '/' || /^\/(about|contact|pricing|faq|help|terms|privacy)/i.test(route);
+  const marketingChunks: string[] = [];
 
   let ast: AnyNode;
   try {
@@ -342,6 +346,14 @@ export function extractSignals(content: string, route: string, filePath: string)
           required: hasAttr(attrs, 'required'),
         });
       }
+
+      // ── Marketing Text Extraction (only on landing / info pages) ─────────
+      if (isMarketingRoute) {
+        if (['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'article'].includes(name.toLowerCase())) {
+          const text = jsxChildText(children);
+          if (text.length > 15) marketingChunks.push(text);
+        }
+      }
     }
 
     // ── BinaryExpression: role === 'admin', status === 'active' ────────────
@@ -428,6 +440,10 @@ export function extractSignals(content: string, route: string, filePath: string)
   }
 
   // Deduplicate
+  if (marketingChunks.length > 0) {
+    result.marketingText = marketingChunks.join('\n\n');
+  }
+
   result.roles = [...new Set(result.roles)];
   result.apiCalls = [...new Set(result.apiCalls)];
   const seenHrefs = new Set<string>();

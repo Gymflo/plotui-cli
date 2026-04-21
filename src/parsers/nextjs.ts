@@ -26,6 +26,7 @@ export interface ExtractedPage {
   statusConditions: string[];
   apiCalls: string[];
   headings: string[];
+  marketingText?: string;
 }
 
 export function parseNextJSApp(rootDir: string): { parsedFiles: ParsedFile[]; rawFileContents: RawFileContent[]; extractedPages: ExtractedPage[] } {
