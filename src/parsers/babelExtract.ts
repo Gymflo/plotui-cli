@@ -307,15 +307,21 @@ export function extractSignals(content: string, route: string, filePath: string)
       if (name === 'Link' || name === 'a') {
         const href = getAttr(attrs, 'href');
         if (href && href.startsWith('/')) {
-          const label = jsxChildText(children).slice(0, 80);
-          if (label) result.navLinks.push({ label, href });
+          let label = jsxChildText(children).slice(0, 80);
+          if (!label || label.length < 2) {
+            label = getAttr(attrs, 'aria-label') || getAttr(attrs, 'title') || '';
+          }
+          if (label && label.length > 0) result.navLinks.push({ label, href });
         }
       }
 
       // ── Buttons ──────────────────────────────────────────────────────────
-      if (name === 'Button' || name === 'button') {
-        const label = jsxChildText(children).slice(0, 80);
-        if (label.length > 1) result.buttons.push(label);
+      if (name === 'Button' || name === 'button' || name === 'IconButton') {
+        let label = jsxChildText(children).slice(0, 80);
+        if (!label || label.length < 2) {
+          label = getAttr(attrs, 'aria-label') || getAttr(attrs, 'title') || '';
+        }
+        if (label && label.length > 0) result.buttons.push(label);
       }
 
       // ── Tabs ─────────────────────────────────────────────────────────────
@@ -324,8 +330,8 @@ export function extractSignals(content: string, route: string, filePath: string)
         if (label) result.tabs.push(label);
       }
 
-      // ── Headings ─────────────────────────────────────────────────────────
-      if (name === 'h1' || name === 'h2' || name === 'h3') {
+      // ── Semantic Dashboard UI & Headings ─────────────────────────────────
+      if (['h1', 'h2', 'h3', 'CardTitle', 'CardDescription', 'CardHeader', 'Badge', 'Label', 'dt', 'dd', 'Legend'].includes(name)) {
         const label = jsxChildText(children).slice(0, 120);
         if (label) result.headings.push(label);
       }
