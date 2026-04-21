@@ -72,8 +72,11 @@ export function detectFramework(rootDir: string): Framework {
 
   // Try to be helpful — check if there's a supported app in a subdir we can suggest
   const auto = findSupportedAppDir(rootDir);
+  const isInit = process.argv.includes('init');
+  const cmdStr = isInit ? 'init' : 'scan';
+
   const hint = auto
-    ? `\n  Looks like your app is at: ${path.relative(rootDir, auto.dir) || '.'}\n  Try:  npx plotui-cli@latest scan --dir ${path.relative(rootDir, auto.dir)}`
+    ? `\n  Looks like your app is at: ${path.relative(rootDir, auto.dir) || '.'}\n  Try:  npx plotui-cli@latest ${cmdStr} --dir ${path.relative(rootDir, auto.dir)}`
     : `\n  Pass --dir <path> to point at your Next.js / Vite / CRA app.`;
 
   throw new Error(
